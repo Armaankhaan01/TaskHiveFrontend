@@ -28,7 +28,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const [moveMode, setMoveMode] = useStorageState<boolean>(false, "moveMode", "sessionStorage");
 
-  const sortOption = user.settings.sortOption;
+  const sortOption = user?.settings.sortOption;
   const setSortOption = useCallback(
     (option: SortOption) => {
       setUser((prev) => ({

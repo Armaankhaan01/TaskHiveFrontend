@@ -1,6 +1,9 @@
 import { ReactElement, Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Loading } from "./components";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
 const Home = lazy(() => import("./pages/Home"));
 const TaskDetails = lazy(() => import("./pages/TaskDetails"));
@@ -17,15 +20,80 @@ const AppRouter = (): ReactElement => {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/task/:id" element={<TaskDetails />} />
-        <Route path="/share" element={<SharePage />} />
-        <Route path="/add" element={<AddTask />} />
-        <Route path="/user" element={<UserProfile />} />
-        <Route path="/transfer" element={<Transfer />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/purge" element={<Purge />} />
-        <Route path="/sync" element={<Sync />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/task/:id"
+          element={
+            <ProtectedRoute>
+              <TaskDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/share"
+          element={
+            <ProtectedRoute>
+              <SharePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/add"
+          element={
+            <ProtectedRoute>
+              <AddTask />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transfer"
+          element={
+            <ProtectedRoute>
+              <Transfer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <ProtectedRoute>
+              <Categories />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purge"
+          element={
+            <ProtectedRoute>
+              <Purge />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sync"
+          element={
+            <ProtectedRoute>
+              <Sync />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

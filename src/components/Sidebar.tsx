@@ -258,12 +258,12 @@ export const ProfileSidebar = () => {
         <MenuLink to="/">
           <StyledMenuItem onClick={handleClose}>
             <TaskAltRounded /> &nbsp; Tasks
-            {tasks.filter((task) => !task.done).length > 0 && (
-              <Tooltip title={`${tasks.filter((task) => !task.done).length} tasks to do`}>
+            {tasks?.filter((task) => !task.done).length > 0 && (
+              <Tooltip title={`${tasks?.filter((task) => !task.done).length} tasks to do`}>
                 <MenuLabel>
-                  {tasks.filter((task) => !task.done).length > 99
+                  {tasks?.filter((task) => !task.done).length > 99
                     ? "99+"
-                    : tasks.filter((task) => !task.done).length}
+                    : tasks?.filter((task) => !task.done).length}
                 </MenuLabel>
               </Tooltip>
             )}

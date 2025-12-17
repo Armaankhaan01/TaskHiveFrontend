@@ -1,6 +1,7 @@
 import { useContext, useMemo, lazy, Suspense, useEffect } from "react";
 import {
   AddButton,
+  AIButton,
   GreetingHeader,
   Offline,
   ProgressPercentageContainer,
@@ -16,7 +17,14 @@ import {
 import { Emoji } from "emoji-picker-react";
 import { Box, Button, CircularProgress, Tooltip, Typography } from "@mui/material";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
-import { AddRounded, CloseRounded, TodayRounded, UndoRounded, WifiOff } from "@mui/icons-material";
+import {
+  AddRounded,
+  CloseRounded,
+  Mic,
+  TodayRounded,
+  UndoRounded,
+  WifiOff,
+} from "@mui/icons-material";
 import { UserContext } from "../contexts/UserContext";
 import { useResponsiveDisplay } from "../hooks/useResponsiveDisplay";
 import { useNavigate } from "react-router-dom";
@@ -41,11 +49,11 @@ const Home = () => {
 
   // Calculate these values only when tasks change
   const taskStats = useMemo(() => {
-    const completedCount = tasks.filter((task) => task.done).length;
+    const completedCount = tasks?.filter((task) => task.done).length;
     const completedPercentage = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
     const today = new Date().setHours(0, 0, 0, 0);
-    const dueTodayTasks = tasks.filter((task) => {
+    const dueTodayTasks = tasks?.filter((task) => {
       if (task.deadline) {
         const taskDeadline = new Date(task.deadline).setHours(0, 0, 0, 0);
         return taskDeadline === today && !task.done;
@@ -213,6 +221,18 @@ const Home = () => {
           >
             <AddRounded style={{ fontSize: "44px" }} />
           </AddButton>
+        </Tooltip>
+      )}
+      {!isMobile && (
+        <Tooltip title="For Assistant" placement="right">
+          <AIButton
+            animate={tasks.length === 0}
+            glow={settings.enableGlow}
+            onClick={() => console.log("clicked")}
+            aria-label="Mic for AI"
+          >
+            <Mic style={{ fontSize: "44px" }} />
+          </AIButton>
         </Tooltip>
       )}
     </>

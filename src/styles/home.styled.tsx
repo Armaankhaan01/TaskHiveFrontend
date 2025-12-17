@@ -117,6 +117,49 @@ export const AddButton = styled(Button)<{ animate?: boolean; glow: boolean }>`
   align-items: center;
   justify-content: center;
   position: fixed;
+  bottom: 124px;
+  width: 72px;
+  height: 72px;
+  border-radius: 100%;
+  background-color: ${({ theme }) => theme.primary};
+  color: ${({ theme }) => getFontColor(theme.primary)};
+  right: 16vw;
+  box-shadow: ${({ glow, theme }) => (glow ? `0px 0px 32px -8px ${theme}` : "none")};
+  transition:
+    background-color 0.3s,
+    backdrop-filter 0.3s,
+    box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: none;
+    background-color: ${({ theme }) => theme.primary};
+    backdrop-filter: blur(6px);
+  }
+
+  animation: ${scale} 0.5s;
+  ${({ animate, theme }) =>
+    animate &&
+    css`
+      animation: ${pulseAnimation(theme.primary, 14)} 1.2s infinite;
+    `}
+
+  ${({ theme }) => reduceMotion(theme)}
+
+  @media (max-width: 1024px) {
+    right: 24px;
+  }
+
+  @media print {
+    display: none;
+  }
+`;
+export const AIButton = styled(Button)<{ animate?: boolean; glow: boolean }>`
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
   bottom: 24px;
   width: 72px;
   height: 72px;
