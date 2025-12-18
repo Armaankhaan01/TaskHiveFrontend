@@ -59,6 +59,8 @@ export interface Task {
   position?: number;
 }
 
+export type CreateTaskInput = Omit<Task, "id" | "lastSave" | "sharedBy" | "position">;
+
 /**
  * Represents a category in the application.
  */
@@ -68,6 +70,13 @@ export interface Category {
   emoji?: string;
   color: string;
   lastSave?: Date;
+}
+
+export type CreateCategoryInput = Omit<Category, "id">;
+
+export interface CreateCategoryResponse {
+  message: string;
+  category: Category;
 }
 
 /**

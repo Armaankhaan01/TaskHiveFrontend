@@ -1,4 +1,4 @@
-import { Category, Task } from "../types/user";
+import { Category, CreateTaskInput, Task } from "../types/user";
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AddTaskButton, Container, StyledInput } from "../styles";
@@ -9,11 +9,12 @@ import { ColorPicker, TopBar, CustomEmojiPicker } from "../components";
 import { UserContext } from "../contexts/UserContext";
 import { useStorageState } from "../hooks/useStorageState";
 import { useTheme } from "@emotion/react";
-import { generateUUID, getFontColor, isDark, showToast } from "../utils";
+import { getFontColor, isDark, showToast } from "../utils";
 import { ColorPalette } from "../theme/themeConfig";
 import InputThemeProvider from "../contexts/InputThemeProvider";
 import { CategorySelect } from "../components/CategorySelect";
 import { useToasterStore } from "react-hot-toast";
+import { createTask } from "../api/tasks";
 
 const AddTask = () => {
   const { user, setUser } = useContext(UserContext);
@@ -85,7 +86,7 @@ const AddTask = () => {
     setDeadline(event.target.value);
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (name === "") {
       showToast("Task name is required.", {
         type: "error",
@@ -100,8 +101,7 @@ const AddTask = () => {
       return; // Do not add the task if the name or description exceeds the maximum length
     }
 
-    const newTask: Task = {
-      id: generateUUID(),
+    const newTask: CreateTaskInput = {
       done: false,
       pinned: false,
       name,
@@ -112,17 +112,18 @@ const AddTask = () => {
       deadline: deadline !== "" ? new Date(deadline) : undefined,
       category: selectedCategories ? selectedCategories : [],
     };
-
+    const response = await createTask(newTask);
+    const task: Task = response.data;
     setUser((prevUser) => ({
       ...prevUser,
-      tasks: [...prevUser.tasks, newTask],
+      tasks: [...prevUser.tasks, task],
     }));
 
     n("/");
 
     showToast(
       <div>
-        Added task - <b>{newTask.name}</b>
+        Added task - <b>{task.name}</b>
       </div>,
       {
         icon: <AddTaskRounded />,

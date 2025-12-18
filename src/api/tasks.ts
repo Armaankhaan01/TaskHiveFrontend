@@ -1,9 +1,9 @@
-import { Task } from "../types/user";
+import { CreateTaskInput, Task } from "../types/user";
 import api from "./axios";
 
 export const fetchTasks = () => api.get<Task[]>("/task");
 
-export const createTask = (data: Partial<Task>) => api.post<Task>("/task", data);
+export const createTask = (data: CreateTaskInput) => api.post<Task>("/task", data);
 
 export const updateTask = (id: string, data: Partial<Task>) => api.put<Task>(`/task/${id}`, data);
 

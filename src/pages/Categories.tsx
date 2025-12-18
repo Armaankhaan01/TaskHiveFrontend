@@ -8,7 +8,7 @@ import {
   CustomEmojiPicker,
   TopBar,
 } from "../components";
-import type { Category, Task, UUID } from "../types/user";
+import type { Category, CreateCategoryInput, Task, UUID } from "../types/user";
 import { useTheme } from "@emotion/react";
 import { Delete, DeleteRounded, Edit, ExpandMoreRounded, SaveRounded } from "@mui/icons-material";
 import {
@@ -38,11 +38,13 @@ import {
   StarChecked,
   StarUnchecked,
 } from "../styles";
-import { formatDate, generateUUID, getFontColor, showToast, timeAgo } from "../utils";
+import { formatDate, getFontColor, showToast, timeAgo } from "../utils";
 import { ColorPalette } from "../theme/themeConfig";
 import InputThemeProvider from "../contexts/InputThemeProvider";
 import { useToasterStore } from "react-hot-toast";
 import { TaskContext } from "../contexts/TaskContext";
+import { createCategory, deleteCategory, updateCategoryOnServer } from "../api/categories";
+import { updateProfile } from "../api/auth";
 
 const DEFAULT_EDIT_CATEGORY_SUBTITLE = "Edit the details of the category.";
 
@@ -100,38 +102,55 @@ const Categories = () => {
     }
   }, [selectedCategoryId, user.categories]);
 
-  const handleDelete = (categoryId: UUID | undefined) => {
+  const handleDelete = async (categoryId: UUID | undefined) => {
     if (!categoryId) return;
 
     const categoryName = user.categories.find((category) => category.id === categoryId)?.name || "";
 
-    const updatedCategories = user.categories.filter((category) => category.id !== categoryId);
-    const updatedFavoriteCategories = user.favoriteCategories.filter((id) => id !== categoryId);
+    try {
+      const categoryRes = await deleteCategory(categoryId);
 
-    const updatedTasks = user.tasks.map((task) => {
-      const updatedCategoryList = task.category?.filter((category) => category.id !== categoryId);
-      return {
-        ...task,
-        category: updatedCategoryList,
-      };
-    });
+      if (categoryRes.data.message !== "Category deleted") {
+        throw new Error("Unexpected response");
+      }
 
-    setUser((prevUser) => ({
-      ...prevUser,
-      categories: updatedCategories,
-      favoriteCategories: updatedFavoriteCategories,
-      tasks: updatedTasks,
-      deletedCategories: [
-        ...(prevUser.deletedCategories || []),
-        ...(prevUser.deletedCategories?.includes(categoryId) ? [] : [categoryId]),
-      ],
-    }));
+      setUser((prevUser) => {
+        const updatedCategories = prevUser.categories.filter(
+          (category) => category.id !== categoryId,
+        );
 
-    showToast(
-      <div>
-        Deleted category - <b translate="no">{categoryName}.</b>
-      </div>,
-    );
+        const updatedFavoriteCategories = prevUser.favoriteCategories.filter(
+          (id) => id !== categoryId,
+        );
+
+        const updatedTasks = prevUser.tasks.map((task) => ({
+          ...task,
+          category: task.category?.filter((category) => category.id !== categoryId),
+        }));
+
+        return {
+          ...prevUser,
+          categories: updatedCategories,
+          favoriteCategories: updatedFavoriteCategories,
+          tasks: updatedTasks,
+          deletedCategories: prevUser.deletedCategories?.includes(categoryId)
+            ? prevUser.deletedCategories
+            : [...(prevUser.deletedCategories || []), categoryId],
+        };
+      });
+
+      showToast(
+        <div>
+          Deleted category – <b translate="no">{categoryName}</b>
+        </div>,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || "Failed to delete category. Please try again.";
+
+      showToast(<div>{message}</div>, { type: "error" });
+    }
   };
 
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,40 +173,52 @@ const Categories = () => {
     }
   };
 
-  const handleAddCategory = () => {
-    if (name !== "") {
-      if (name.length > CATEGORY_NAME_MAX_LENGTH) {
-        return;
-      }
-      const newCategory: Category = {
-        id: generateUUID(),
-        lastSave: new Date(),
-        name,
-        emoji: emoji !== "" && emoji !== null ? emoji : undefined,
-        color,
-      };
-
-      showToast(
-        <div>
-          Added category - <b translate="no">{newCategory.name}</b>
-        </div>,
-      );
-
-      setUser((prevUser) => ({
-        ...prevUser,
-        categories: [...prevUser.categories, newCategory],
-      }));
-
-      setName("");
-      setColor(theme.primary);
-      setEmoji("");
-    } else {
+  const handleAddCategory = async () => {
+    if (!name) {
       showToast("Category name is required.", {
         type: "error",
         preventDuplicate: true,
         id: "category-name-required",
         visibleToasts: toasts,
       });
+      return;
+    }
+
+    if (name.length > CATEGORY_NAME_MAX_LENGTH) {
+      showToast("Category name is too long.", { type: "error" });
+      return;
+    }
+
+    try {
+      const newCategory: CreateCategoryInput = {
+        lastSave: new Date(),
+        name,
+        emoji: emoji || undefined,
+        color,
+      };
+
+      const categoryRes = await createCategory(newCategory);
+
+      showToast(
+        <div>
+          Added category – <b translate="no">{categoryRes.data.category.name}</b>
+        </div>,
+      );
+
+      setUser((prevUser) => ({
+        ...prevUser,
+        categories: [...prevUser.categories, categoryRes.data.category],
+      }));
+
+      setName("");
+      setColor(theme.primary);
+      setEmoji("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      // ✅ THIS is where errors land
+      const message = err?.response?.data?.message || "Failed to create category";
+
+      showToast(message, { type: "error" });
     }
   };
 
@@ -199,34 +230,51 @@ const Categories = () => {
     setEditEmoji(null);
   };
 
-  const handleEditCategory = () => {
-    updateCategory({
+  const handleEditCategory = async () => {
+    const updatedCategory = {
       id: selectedCategoryId,
       name: editName,
       emoji: editEmoji || undefined,
       color: editColor,
       lastSave: new Date(),
-    });
+    };
 
-    showToast(
-      <div>
-        Updated category - <b translate="no">{editName}</b>
-      </div>,
-    );
+    try {
+      const categoryRes = await updateCategoryOnServer(selectedCategoryId!, updatedCategory);
+      updateCategory(updatedCategory);
+      showToast(
+        <div>
+          <b translate="no">{categoryRes.data.message}</b>
+        </div>,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Failed to create category";
+
+      showToast(message, { type: "error" });
+    }
 
     setOpenEditDialog(false);
   };
 
-  const handleAddToFavorites = (category: Category) => {
-    setUser((user) => ({
-      ...user,
-      favoriteCategories: user.favoriteCategories.includes(category.id)
-        ? user.favoriteCategories.filter((id) => id !== category.id)
-        : [...user.favoriteCategories, category.id],
-      categories: user.categories.map((cat) =>
-        cat.id === category.id ? { ...cat, lastSave: new Date() } : cat,
-      ),
-    }));
+  const handleAddToFavorites = async (category: Category) => {
+    setUser((prevUser) => {
+      const updatedFavorites = prevUser.favoriteCategories.includes(category.id)
+        ? prevUser.favoriteCategories.filter((id) => id !== category.id)
+        : [...prevUser.favoriteCategories, category.id];
+
+      updateProfile({ favoriteCategories: updatedFavorites }).catch(() => {
+        showToast("Failed to update favorites", { type: "error" });
+      });
+
+      return {
+        ...prevUser,
+        favoriteCategories: updatedFavorites,
+        categories: prevUser.categories.map((cat) =>
+          cat.id === category.id ? { ...cat, lastSave: new Date() } : cat,
+        ),
+      };
+    });
   };
 
   const getAssociatedTasks = (categoryId: UUID): Task[] => {

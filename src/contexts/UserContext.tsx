@@ -3,6 +3,7 @@ import type { User } from "../types/user";
 import { defaultUser } from "../constants/defaultUser";
 import { getProfile } from "../api/auth";
 import { fetchTasks } from "../api/tasks";
+import { fetchCategories } from "../api/categories";
 
 interface UserContextProps {
   user: User;
@@ -40,10 +41,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const profileRes = await getProfile();
         const tasksRes = await fetchTasks();
-
+        const categoriesRes = await fetchCategories();
         setUser({
           ...profileRes.data,
           tasks: tasksRes.data ?? [],
+          categories: categoriesRes.data ?? [],
         });
 
         setIsAuthenticated(true);
