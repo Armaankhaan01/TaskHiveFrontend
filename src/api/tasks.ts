@@ -5,8 +5,19 @@ export const fetchTasks = () => api.get<Task[]>("/task");
 
 export const createTask = (data: CreateTaskInput) => api.post<Task>("/task", data);
 
-export const updateTask = (id: string, data: Partial<Task>) => api.put<Task>(`/task/${id}`, data);
+export const updateTask = async (id: string, payload: Partial<Task>): Promise<Task> => {
+  const res = await api.patch(`/task/${id}`, payload);
+  return res.data;
+};
 
 export const deleteTask = (id: string) => api.delete(`/task/${id}`);
 
-export const toggleTask = (id: string) => api.patch<Task>(`/task/${id}/toggle`);
+export const toggleTask = async (id: string, payload: Partial<Task>): Promise<Task> => {
+  const res = await api.patch(`/task/${id}/toggle`, payload);
+  return res.data;
+};
+
+export const deleteTasksBulk = async (ids: string[]) => {
+  const res = await api.post("/task/bulk", { ids });
+  return res.data as { deletedIds: string[] };
+};

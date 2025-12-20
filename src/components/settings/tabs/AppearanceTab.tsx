@@ -24,6 +24,8 @@ import CustomSwitch from "../CustomSwitch";
 import { useSystemTheme } from "../../../hooks/useSystemTheme";
 import { Themes } from "../../../theme/createTheme";
 import { ColorElement } from "../../../styles";
+import { updateProfile } from "../../../api/auth";
+import { showToast } from "../../../utils";
 
 const darkModeOptions: OptionItem<DarkModeOptions>[] = [
   {
@@ -80,12 +82,17 @@ export default function AppearanceTab() {
     setDarkModeValue(user.darkmode);
   }, [user.darkmode, user.emojisStyle]);
 
-  const handleAppThemeChange = (event: SelectChangeEvent<unknown>) => {
+  const handleAppThemeChange = async (event: SelectChangeEvent<unknown>) => {
     const selectedTheme = event.target.value as string;
-    setUser((prevUser) => ({
-      ...prevUser,
-      theme: selectedTheme,
-    }));
+    const res = await updateProfile({ theme: selectedTheme }).catch(() => {
+      showToast("Failed to update app theme", { type: "error" });
+    });
+    if (res) {
+      setUser((prevUser) => ({
+        ...prevUser,
+        theme: res.theme,
+      }));
+    }
   };
 
   return (
@@ -94,12 +101,17 @@ export default function AppearanceTab() {
       <CustomRadioGroup
         options={darkModeOptions}
         value={darkModeValue}
-        onChange={(val) => {
-          setDarkModeValue(val);
-          setUser((prevUser) => ({
-            ...prevUser,
-            darkmode: val,
-          }));
+        onChange={async (val) => {
+          const res = await updateProfile({ darkmode: val }).catch(() => {
+            showToast(" Error While updating dark mode", { type: "error" });
+          });
+          if (res) {
+            setDarkModeValue(res.darkmode);
+            setUser((prevUser) => ({
+              ...prevUser,
+              darkmode: res.darkmode,
+            }));
+          }
         }}
       />
       <SectionHeading>Theme Selection</SectionHeading>
@@ -134,15 +146,25 @@ export default function AppearanceTab() {
       <CustomRadioGroup
         options={reduceMotionOptions}
         value={reduceMotionValue}
-        onChange={(val) => {
+        onChange={async (val) => {
           setReduceMotionValue(val);
-          setUser((prevUser) => ({
-            ...prevUser,
+          const res = await updateProfile({
             settings: {
-              ...prevUser.settings,
+              ...user.settings,
               reduceMotion: val,
             },
-          }));
+          }).catch(() => {
+            showToast("Failed to update reduce motion settings", { type: "error" });
+          });
+          if (res) {
+            setUser((prevUser) => ({
+              ...prevUser,
+              settings: {
+                ...prevUser.settings,
+                reduceMotion: res.settings.reduceMotion,
+              },
+            }));
+          }
         }}
       />
       <CustomSwitch

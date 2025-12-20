@@ -41,9 +41,9 @@ const AppRouter = (): ReactElement => {
         <Route
           path="/share"
           element={
-            <ProtectedRoute>
-              <SharePage />
-            </ProtectedRoute>
+            // <ProtectedRoute>
+            <SharePage />
+            // </ProtectedRoute>
           }
         />
         <Route

@@ -23,6 +23,7 @@ import { Task, UUID } from "../types/user";
 import { useStorageState } from "../hooks/useStorageState";
 import { DeleteForeverRounded, DeleteSweepRounded, DoneAllRounded } from "@mui/icons-material";
 import { showToast } from "../utils";
+import { deleteTasksBulk } from "../api/tasks";
 
 const Purge = () => {
   const { user, setUser } = useContext(UserContext);
@@ -63,22 +64,27 @@ const Purge = () => {
     });
   };
 
-  const purgeTasks = (tasks: Task[]) => {
-    const updatedTasks = user.tasks.filter(
-      (task) => !tasks.some((purgeTask) => purgeTask === task),
-    );
+  const purgeTasks = async (tasksToPurge: Task[]) => {
+    if (!tasksToPurge.length) return;
 
-    const purgedTaskIds = tasks.map((task) => task.id);
+    const ids = tasksToPurge.map((t) => t.id);
 
-    setSelectedTasks([]);
-    setUser((prevUser) => ({
-      ...prevUser,
-      tasks: updatedTasks,
-      deletedTasks: [
-        ...(prevUser.deletedTasks || []),
-        ...purgedTaskIds.filter((id) => !prevUser.deletedTasks?.includes(id)),
-      ],
-    }));
+    try {
+      await deleteTasksBulk(ids);
+
+      setUser((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((task) => !ids.includes(task.id)),
+        deletedTasks: [
+          ...(prev.deletedTasks || []),
+          ...ids.filter((id) => !prev.deletedTasks?.includes(id)),
+        ],
+      }));
+
+      setSelectedTasks([]);
+    } catch {
+      showToast("Failed to purge tasks from server", { type: "error" });
+    }
   };
 
   const handlePurgeSelected = () => {

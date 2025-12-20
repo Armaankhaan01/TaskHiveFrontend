@@ -59,7 +59,7 @@ export interface Task {
   position?: number;
 }
 
-export type CreateTaskInput = Omit<Task, "id" | "lastSave" | "sharedBy" | "position">;
+export type CreateTaskInput = Omit<Task, "id" | "lastSave" | "position">;
 
 /**
  * Represents a category in the application.

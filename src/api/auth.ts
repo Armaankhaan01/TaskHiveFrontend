@@ -8,4 +8,7 @@ export const register = (data: { name: string; email: string; password: string }
 
 export const getProfile = () => api.get<User>("/auth/me");
 
-export const updateProfile = (data: Partial<User>) => api.put<User>("/auth/me", data);
+export const updateProfile = async (data: Partial<User>): Promise<User> => {
+  const res = await api.put<User>("/auth/me", data);
+  return res.data;
+};

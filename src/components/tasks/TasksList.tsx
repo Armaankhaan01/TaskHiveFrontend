@@ -60,6 +60,7 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import DisabledThemeProvider from "../../contexts/DisabledThemeProvider";
+import { deleteTask, toggleTask, updateTask } from "../../api/tasks";
 
 const TaskMenuButton = memo(
   ({ task, onClick }: { task: Task; onClick: (event: React.MouseEvent<HTMLElement>) => void }) => (
@@ -235,15 +236,22 @@ export const TasksList: React.FC = () => {
 
   const orderedTasks = useMemo(() => reorderTasks(user.tasks), [user.tasks, reorderTasks]);
 
-  const confirmDeleteTask = () => {
+  const confirmDeleteTask = async () => {
     if (!selectedTaskId) {
       return;
     }
+
+    await deleteTask(selectedTaskId).catch(() => {
+      showToast("Failed to delete task", { type: "error" });
+    });
+
     const updatedTasks = user.tasks.filter((task) => task.id !== selectedTaskId);
+
     setUser((prevUser) => ({
       ...prevUser,
       tasks: updatedTasks,
     }));
+
     user.deletedTasks.push(selectedTaskId);
     setDeleteDialogOpen(false);
     showToast(
@@ -266,22 +274,64 @@ export const TasksList: React.FC = () => {
     setDeleteDialogOpen(false);
   };
 
-  const handleMarkSelectedAsDone = () => {
-    setUser((prevUser) => ({
-      ...prevUser,
-      tasks: prevUser.tasks.map((task) => {
-        if (multipleSelectedTasks.includes(task.id)) {
-          // Mark the task as done if selected
-          return { ...task, done: true, lastSave: new Date() };
-        }
-        return task;
-      }),
-    }));
-    // Clear the selected task IDs after the operation
-    setMultipleSelectedTasks([]);
+  const handleMarkSelectedAsDone = async () => {
+    try {
+      const results = await Promise.allSettled(
+        multipleSelectedTasks.map((id) => toggleTask(id, { done: true })),
+      );
+
+      const successfulDone = results
+        .filter((res): res is PromiseFulfilledResult<Task> => res.status === "fulfilled")
+        .map((res) => res.value);
+
+      const failedDone = results.filter((res) => res.status === "rejected");
+
+      if (failedDone.length) {
+        showToast(`${failedDone.length} task(s) failed to mark as done`, { type: "error" });
+      }
+
+      if (successfulDone.length) {
+        setUser((prev) => ({
+          ...prev,
+          tasks: prev.tasks.map((task) => {
+            const updated = successfulDone.find((t) => t.id === task.id);
+            return updated ? updated : task;
+          }),
+        }));
+      }
+    } finally {
+      setMultipleSelectedTasks([]);
+    }
   };
 
   const handleDeleteSelected = () => setDeleteSelectedOpen(true);
+  const handleDeleteMultiSelected = async () => {
+    try {
+      const results = await Promise.allSettled(multipleSelectedTasks.map((id) => deleteTask(id)));
+
+      const successfulDeletes = results
+        .map((res, idx) => (res.status === "fulfilled" ? multipleSelectedTasks[idx] : null))
+        .filter(Boolean) as string[];
+
+      const failedDeletes = results
+        .map((res, idx) => (res.status === "rejected" ? multipleSelectedTasks[idx] : null))
+        .filter(Boolean);
+
+      if (failedDeletes.length) {
+        showToast(`${failedDeletes.length} task(s) failed to delete`, { type: "error" });
+      }
+
+      if (successfulDeletes.length) {
+        setUser((prev) => ({
+          ...prev,
+          tasks: prev.tasks.filter((task) => !successfulDeletes.includes(task.id)),
+        }));
+      }
+    } finally {
+      setMultipleSelectedTasks([]);
+      setDeleteSelectedOpen(false);
+    }
+  };
 
   useEffect(() => {
     const tasks: Task[] = orderedTasks;
@@ -374,27 +424,34 @@ export const TasksList: React.FC = () => {
     }),
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = orderedTasks.findIndex((task) => task.id === active.id);
-    const newIndex = orderedTasks.findIndex((task) => task.id === over.id);
+
+    const oldIndex = orderedTasks.findIndex((t) => t.id === active.id);
+    const newIndex = orderedTasks.findIndex((t) => t.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // calculate new positions for all tasks in the new order
     const newOrdered = arrayMove(orderedTasks, oldIndex, newIndex);
-    // assign position as index
-    const updatedTasks = user.tasks.map((task) => {
-      const idx = newOrdered.findIndex((t) => t.id === task.id);
-      return idx !== -1 ? { ...task, position: idx, lastSave: new Date() } : task;
-    });
-    setUser((prevUser) => ({
-      ...prevUser,
-      tasks: updatedTasks,
+
+    // Optimistic UI update
+    setUser((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((task) => {
+        const index = newOrdered.findIndex((t) => t.id === task.id);
+        return index !== -1 ? { ...task, position: index, lastSave: new Date() } : task;
+      }),
     }));
-    requestAnimationFrame(() => {
-      setActiveDragId(null);
-    });
+
+    setActiveDragId(null);
+
+    // Persist order to backend
+    try {
+      await Promise.all(newOrdered.map((task, index) => updateTask(task.id, { position: index })));
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      showToast("Failed to save task order", { type: "error" });
+    }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -730,22 +787,7 @@ export const TasksList: React.FC = () => {
           <DialogBtn onClick={() => setDeleteSelectedOpen(false)} color="primary">
             Cancel
           </DialogBtn>
-          <DialogBtn
-            onClick={() => {
-              setUser((prevUser) => ({
-                ...prevUser,
-                tasks: prevUser.tasks.filter((task) => !multipleSelectedTasks.includes(task.id)),
-                deletedTasks: [
-                  ...(prevUser.deletedTasks || []),
-                  ...multipleSelectedTasks.filter((id) => !prevUser.deletedTasks?.includes(id)),
-                ],
-              }));
-              // Clear the selected task IDs after the operation
-              setMultipleSelectedTasks([]);
-              setDeleteSelectedOpen(false);
-            }}
-            color="error"
-          >
+          <DialogBtn onClick={handleDeleteMultiSelected} color="error">
             Delete
           </DialogBtn>
         </DialogActions>

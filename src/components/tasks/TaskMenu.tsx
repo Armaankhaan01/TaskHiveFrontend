@@ -33,6 +33,7 @@ import { TaskContext } from "../../contexts/TaskContext";
 import { ColorPalette } from "../../theme/themeConfig";
 import { ShareDialog } from "./ShareDialog";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
+import { createTask, toggleTask } from "../../api/tasks";
 
 export const TaskMenu = () => {
   const { user, setUser } = useContext(UserContext);
@@ -66,77 +67,85 @@ export const TaskMenu = () => {
     n(`/task/${taskId}`);
   };
 
-  const handleMarkAsDone = () => {
+  const handleMarkAsDone = async (done: boolean) => {
     // Toggles the "done" property of the selected task
     if (selectedTaskId) {
       handleCloseMoreMenu();
-      const updatedTasks = tasks.map((task) => {
-        if (task.id === selectedTaskId) {
-          return { ...task, done: !task.done, lastSave: new Date() };
-        }
-        return task;
-      });
-      setUser((prevUser) => ({
-        ...prevUser,
-        tasks: updatedTasks,
-      }));
-
-      const allTasksDone = updatedTasks.every((task) => task.done);
-
-      if (allTasksDone) {
-        showToast(
-          <div>
-            <b>All tasks done</b>
-            <br />
-            <span>You've checked off all your todos. Well done!</span>
-          </div>,
-          {
-            icon: (
-              <div style={{ margin: "-6px 4px -6px -6px" }}>
-                <TaskIcon variant="success" scale={0.18} />
-              </div>
-            ),
-          },
-        );
-      }
-    }
-  };
-
-  const handlePin = () => {
-    // Toggles the "pinned" property of the selected task
-    if (selectedTaskId) {
-      handleCloseMoreMenu();
-      const updatedTasks = tasks.map((task) => {
-        if (task.id === selectedTaskId) {
-          return { ...task, pinned: !task.pinned, lastSave: new Date() };
-        }
-        return task;
-      });
-      setUser((prevUser) => ({
-        ...prevUser,
-        tasks: updatedTasks,
-      }));
-    }
-  };
-
-  const handleDuplicateTask = () => {
-    handleCloseMoreMenu();
-    if (selectedTaskId) {
-      if (selectedTask) {
-        // Create a duplicated task with a new ID and current date
-        const duplicatedTask: Task = {
-          ...selectedTask,
-          id: generateUUID(),
-          date: new Date(),
-          lastSave: undefined,
-        };
-        // Add the duplicated task to the existing tasks
-        const updatedTasks = [...tasks, duplicatedTask];
-        // Update the user object with the updated tasks
+      try {
+        const response = await toggleTask(selectedTaskId, { done: !done });
+        const updatedTasks = tasks.map((task) => {
+          if (task.id === response.id) {
+            return response;
+          }
+          return task;
+        });
         setUser((prevUser) => ({
           ...prevUser,
           tasks: updatedTasks,
         }));
+        const allTasksDone = updatedTasks.every((task) => task.done);
+
+        if (allTasksDone) {
+          showToast(
+            <div>
+              <b>All tasks done</b>
+              <br />
+              <span>You've checked off all your todos. Well done!</span>
+            </div>,
+            {
+              icon: (
+                <div style={{ margin: "-6px 4px -6px -6px" }}>
+                  <TaskIcon variant="success" scale={0.18} />
+                </div>
+              ),
+            },
+          );
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        showToast("error while changing the status", { type: "error" });
+      }
+    }
+  };
+
+  const handlePin = async (pinned: boolean) => {
+    // Toggles the "pinned" property of the selected task
+    if (selectedTaskId) {
+      handleCloseMoreMenu();
+      try {
+        const response = await toggleTask(selectedTaskId, { pinned: !pinned });
+        const updatedTasks = tasks.map((task) => {
+          if (task.id === response.id) {
+            return response;
+          }
+          return task;
+        });
+        setUser((prevUser) => ({
+          ...prevUser,
+          tasks: updatedTasks,
+        }));
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        showToast("error while pinning the status", { type: "error" });
+      }
+    }
+  };
+
+  const handleDuplicateTask = async () => {
+    handleCloseMoreMenu();
+    if (selectedTaskId) {
+      if (selectedTask) {
+        try {
+          const response = await createTask(selectedTask);
+          const task: Task = response.data;
+          setUser((prevUser) => ({
+            ...prevUser,
+            tasks: [...prevUser.tasks, task],
+          }));
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          showToast("error while Duplicating the task", { type: "error" });
+        }
       }
     }
   };
@@ -259,12 +268,12 @@ export const TaskMenu = () => {
   };
 
   const menuItems: JSX.Element[] = [
-    <StyledMenuItem key="done" onClick={handleMarkAsDone}>
+    <StyledMenuItem key="done" onClick={() => handleMarkAsDone(selectedTask.done)}>
       {selectedTask.done ? <Close /> : <Done />}
       &nbsp; {selectedTask.done ? "Mark as not done" : "Mark as done"}
     </StyledMenuItem>,
 
-    <StyledMenuItem key="pin" onClick={handlePin}>
+    <StyledMenuItem key="pin" onClick={() => handlePin(selectedTask.pinned)}>
       <PushPinRounded sx={{ textDecoration: "line-through" }} />
       &nbsp; {selectedTask.pinned ? "Unpin" : "Pin"}
     </StyledMenuItem>,

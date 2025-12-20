@@ -98,7 +98,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
       <StyledSelect
         multiple
         width={width}
-        value={selectedCats.map((cat) => cat.id)}
+        value={selectedCats?.map((cat) => cat.id)}
         onChange={handleCategoryChange}
         open={isOpen}
         onOpen={() => setIsOpen(true)}

@@ -29,6 +29,7 @@ import { ColorPalette } from "../theme/themeConfig";
 import { getFontColor, isDark, isHexColor, showToast } from "../utils";
 import { CustomDialogTitle } from "./DialogTitle";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import { updateProfile } from "../api/auth";
 
 interface ColorPickerProps {
   color: string;
@@ -108,7 +109,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     };
   };
 
-  const handleAddColor = () => {
+  const handleAddColor = async () => {
     if (colorList.length >= MAX_COLORS_IN_LIST) {
       showToast(`You cannot add more than ${MAX_COLORS_IN_LIST} colors to color list.`, {
         type: "error",
@@ -125,6 +126,9 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     }
 
     handleColorChange(addColorVal.toUpperCase());
+    await updateProfile({ colorList: [...colorList, addColorVal.toUpperCase()] }).catch(() => {
+      showToast("Failed to update Color list", { type: "error" });
+    });
     setUser({ ...user, colorList: [...colorList, addColorVal.toUpperCase()] });
     showToast(
       <div>
@@ -140,8 +144,12 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     handleAddDialogClose();
   };
 
-  const handleDeleteColor = (clr: string) => {
+  const handleDeleteColor = async (clr: string) => {
     setPopoverOpen(Array(colorList.length).fill(false));
+    const newColorList = colorList.filter((listColor) => listColor !== clr);
+    await updateProfile({ colorList: newColorList }).catch(() => {
+      showToast("Failed to update color list", { type: "error" });
+    });
     showToast(
       <div>
         Removed{" "}
@@ -156,7 +164,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
     setUser({
       ...user,
-      colorList: colorList.filter((listColor) => listColor !== clr),
+      colorList: newColorList,
     });
   };
 

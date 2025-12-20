@@ -20,6 +20,7 @@ import { formatDate, showToast, timeAgo } from "../../utils";
 import { useTheme } from "@emotion/react";
 import { ColorPalette } from "../../theme/themeConfig";
 import { CategorySelect } from "../CategorySelect";
+import { updateTask } from "../../api/tasks";
 
 const DEFAULT_EDIT_TASK_SUBTITLE = "Edit the details of the task.";
 
@@ -80,35 +81,36 @@ export const EditTask = ({ open, task, onClose }: EditTaskProps) => {
       [name]: value,
     }));
   };
+
   // Event handler for saving the edited task.
-  const handleSave = () => {
-    document.body.style.overflow = "auto";
-    if (editedTask && !nameError && !descriptionError) {
-      const updatedTasks = user.tasks.map((task) => {
-        if (task.id === editedTask.id) {
-          return {
-            ...task,
-            name: editedTask.name,
-            color: editedTask.color,
-            emoji: editedTask.emoji || undefined,
-            description: editedTask.description || undefined,
-            deadline: editedTask.deadline || undefined,
-            category: editedTask.category || undefined,
-            lastSave: new Date(),
-          };
-        }
-        return task;
+  const handleSave = async () => {
+    if (!editedTask || nameError || descriptionError) return;
+
+    try {
+      const updatedTask = await updateTask(editedTask.id, {
+        name: editedTask.name,
+        description: editedTask.description,
+        color: editedTask.color,
+        emoji: editedTask.emoji,
+        deadline: editedTask.deadline,
+        category: editedTask.category,
       });
+
       setUser((prevUser) => ({
         ...prevUser,
-        tasks: updatedTasks,
+        tasks: prevUser.tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)),
       }));
+
       onClose();
+
       showToast(
         <div>
-          Task <b translate="no">{editedTask.name}</b> updated.
+          Task <b translate="no">{updatedTask.name}</b> updated.
         </div>,
       );
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to update task", { type: "error" });
     }
   };
 

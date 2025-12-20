@@ -258,15 +258,13 @@ const Categories = () => {
   };
 
   const handleAddToFavorites = async (category: Category) => {
+    const updatedFavorites = user.favoriteCategories.includes(category.id)
+      ? user.favoriteCategories.filter((id) => id !== category.id)
+      : [...user.favoriteCategories, category.id];
+    await updateProfile({ favoriteCategories: updatedFavorites }).catch(() => {
+      showToast("Failed to update favorites", { type: "error" });
+    });
     setUser((prevUser) => {
-      const updatedFavorites = prevUser.favoriteCategories.includes(category.id)
-        ? prevUser.favoriteCategories.filter((id) => id !== category.id)
-        : [...prevUser.favoriteCategories, category.id];
-
-      updateProfile({ favoriteCategories: updatedFavorites }).catch(() => {
-        showToast("Failed to update favorites", { type: "error" });
-      });
-
       return {
         ...prevUser,
         favoriteCategories: updatedFavorites,

@@ -3,6 +3,8 @@ import { Box, Switch, Typography, FormControlLabel, FormGroup } from "@mui/mater
 import { User } from "../../types/user";
 import { UserContext } from "../../contexts/UserContext";
 import { InfoOutlined } from "@mui/icons-material";
+import { updateProfile } from "../../api/auth";
+import { showToast } from "../../utils";
 
 interface CustomSwitchProps {
   header: string;
@@ -23,12 +25,20 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
 }) => {
   const { user, setUser } = useContext(UserContext);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     const updatedSettings = {
       ...user.settings,
       [settingKey]: !user.settings[settingKey],
     };
-    setUser((prev) => ({ ...prev, settings: updatedSettings }));
+    const res = await updateProfile({
+      settings: updatedSettings,
+    }).catch(() => {
+      showToast("Failed to update settings", { type: "error" });
+    });
+
+    if (res) {
+      setUser((prev) => ({ ...prev, settings: res.settings }));
+    }
   };
 
   return (

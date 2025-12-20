@@ -11,9 +11,10 @@ import { CustomDialogTitle } from "../components";
 import { TaskItem } from "../components/tasks/TaskItem";
 import Home from "./Home";
 import LZString from "lz-string";
+import { createTask } from "../api/tasks";
 //FIXME: make everything type-safe
 const SharePage = () => {
-  const { user, setUser } = useContext(UserContext);
+  const { setUser, isAuthenticated } = useContext(UserContext);
   const n = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -78,49 +79,35 @@ const SharePage = () => {
     }
   }, [taskParam, userNameParam]);
 
-  const handleAddTask = () => {
-    if (taskData) {
-      // Add missing categories to user.categories
-      const updatedCategories = [...user.categories];
+  const handleAddTask = async () => {
+    if (!taskData) return;
 
-      if (taskData.category) {
-        taskData.category.forEach((taskCategory) => {
-          const existingCategoryIndex = updatedCategories.findIndex(
-            (cat) => cat.id === taskCategory.id,
-          );
+    if (!isAuthenticated) {
+      showToast("Please log in to add this task", { type: "error" });
+      return;
+    }
 
-          if (existingCategoryIndex !== -1) {
-            // If category with the same ID exists, replace it with the new category
-            updatedCategories[existingCategoryIndex] = taskCategory;
-          } else {
-            // Otherwise, add the new category to the array
-            updatedCategories.push(taskCategory);
-          }
-        });
-      }
+    try {
+      const createdTask = await createTask({
+        ...taskData,
+        sharedBy: userName,
+      });
 
       setUser((prevUser) => ({
         ...prevUser,
-        categories: updatedCategories,
-        tasks: [
-          ...prevUser.tasks.filter(Boolean),
-          {
-            ...taskData,
-            id: generateUUID(),
-            sharedBy: userName,
-          },
-        ],
+        tasks: [...prevUser.tasks, createdTask.data],
       }));
 
       n("/");
       showToast(
         <div>
-          Added shared task - <b translate="no">{taskData.name}</b>
+          Added shared task – <b translate="no">{createdTask.data.name}</b>
         </div>,
-        {
-          icon: <AddTaskRounded />,
-        },
+        { icon: <AddTaskRounded /> },
       );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      showToast("Failed to add shared task", { type: "error" });
     }
   };
 
@@ -158,6 +145,12 @@ const SharePage = () => {
                   enableGlow: false,
                 }}
               />
+              {!isAuthenticated && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Please log in to add this task to your account.
+                </Alert>
+              )}
+
               {taskData && taskData.description && taskData.description.match(URL_REGEX) && (
                 <Alert sx={{ mt: "20px" }} severity="warning">
                   <AlertTitle>This task contains the following links:</AlertTitle>{" "}
@@ -183,13 +176,9 @@ const SharePage = () => {
               <DialogBtn color="error" onClick={() => n("/")}>
                 <DoNotDisturbAltRounded /> &nbsp; Decline
               </DialogBtn>
-              <DialogBtn
-                onClick={() => {
-                  handleAddTask();
-                  n("/");
-                }}
-              >
-                <AddTaskRounded /> &nbsp; Add Task
+              <DialogBtn disabled={!isAuthenticated} onClick={handleAddTask}>
+                <AddTaskRounded /> &nbsp;
+                {isAuthenticated ? "Add Task" : "Login required"}
               </DialogBtn>
             </DialogActions>
           </>
