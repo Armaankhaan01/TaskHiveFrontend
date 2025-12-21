@@ -7,7 +7,7 @@ import Signup from "./pages/Signup";
 
 const Home = lazy(() => import("./pages/Home"));
 const TaskDetails = lazy(() => import("./pages/TaskDetails"));
-const SharePage = lazy(() => import("./pages/Share"));
+// const SharePage = lazy(() => import("./pages/Share"));
 const AddTask = lazy(() => import("./pages/AddTask"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Transfer = lazy(() => import("./pages/Transfer"));
@@ -38,14 +38,14 @@ const AppRouter = (): ReactElement => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/share"
-          element={
-            // <ProtectedRoute>
-            <SharePage />
-            // </ProtectedRoute>
-          }
-        />
+        {/* <Route
+         path="/share"
+         element={ 
+            <ProtectedRoute>
+             <SharePage />
+             </ProtectedRoute>
+           }
+         /> */}
         <Route
           path="/add"
           element={

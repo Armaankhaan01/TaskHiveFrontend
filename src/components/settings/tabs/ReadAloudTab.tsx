@@ -31,7 +31,7 @@ import { defaultUser } from "../../../constants/defaultUser";
 import { UserContext } from "../../../contexts/UserContext";
 import { useOnlineStatus } from "../../../hooks/useOnlineStatus";
 import type { AppSettings } from "../../../types/user";
-import { getFontColor, systemInfo } from "../../../utils";
+import { getFontColor, showToast, systemInfo } from "../../../utils";
 import CustomSwitch from "../CustomSwitch";
 import {
   NoVoiceStyles,
@@ -40,6 +40,7 @@ import {
   StyledSelect,
   VolumeSlider,
 } from "../settings.styled";
+import { updateProfile } from "../../../api/auth";
 
 export default function ReadAloudTab() {
   const { user, setUser } = useContext(UserContext);
@@ -107,17 +108,19 @@ export default function ReadAloudTab() {
     };
   }
 
-  const handleVoiceChange = (event: SelectChangeEvent<unknown>) => {
+  const handleVoiceChange = async (event: SelectChangeEvent<unknown>) => {
     const voice = event.target.value as AppSettings["voice"];
     if (voice) {
-      // Update the user settings with the selected voice
-      setUser((prevUser) => ({
-        ...prevUser,
-        settings: {
-          ...prevUser.settings,
-          voice,
-        },
-      }));
+      const res = await updateProfile({ settings: { ...user.settings, voice } }).catch(() => {
+        showToast("Failed to update voice setting", { type: "error" });
+      });
+      if (res) {
+        // Update the user settings with the selected voice
+        setUser((prevUser) => ({
+          ...prevUser,
+          settings: res.settings,
+        }));
+      }
     }
   };
 
@@ -171,34 +174,42 @@ export default function ReadAloudTab() {
   };
 
   // Function to handle changes in voice volume after mouse up
-  const handleVoiceVolCommitChange = (
+  const handleVoiceVolCommitChange = async (
     _event: Event | React.SyntheticEvent<Element, Event>,
     value: number | number[],
   ) => {
-    setUser((prevUser) => ({
-      ...prevUser,
-      settings: {
-        ...prevUser.settings,
-        voiceVolume: value as number,
-      },
-    }));
+    const res = await updateProfile({
+      settings: { ...user.settings, voiceVolume: value as number },
+    }).catch(() => {
+      showToast("Failed to update voice volume setting", { type: "error" });
+    });
+    if (res) {
+      setUser((prevUser) => ({
+        ...prevUser,
+        settings: res.settings,
+      }));
+    }
   };
 
   // Function to handle mute/unmute button click
-  const handleMuteClick = () => {
+  const handleMuteClick = async () => {
     const vol = voiceVolume;
     // Save the previous voice volume before muting
     setPrevVoiceVol(vol);
     const newVoiceVolume =
       vol === 0 ? (prevVoiceVol !== 0 ? prevVoiceVol : defaultUser.settings.voiceVolume) : 0;
-    setUser((prevUser) => ({
-      ...prevUser,
-      settings: {
-        ...prevUser.settings,
-        voiceVolume: newVoiceVolume,
-      },
-    }));
-    setVoiceVolume(newVoiceVolume);
+    const res = await updateProfile({
+      settings: { ...user.settings, voiceVolume: newVoiceVolume },
+    }).catch(() => {
+      showToast("Failed to mute volume", { type: "error" });
+    });
+    if (res) {
+      setUser((prevUser) => ({
+        ...prevUser,
+        settings: res.settings,
+      }));
+      setVoiceVolume(res.settings.voiceVolume);
+    }
   };
 
   const getFlagUnicodes = (countryCode: string): string => {

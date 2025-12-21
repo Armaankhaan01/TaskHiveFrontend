@@ -1,4 +1,4 @@
-import { keyframes, useTheme } from "@emotion/react";
+import { keyframes } from "@emotion/react";
 import styled from "@emotion/styled";
 import {
   AccessTimeFilledRounded,
@@ -9,7 +9,7 @@ import {
   DeleteForeverRounded,
   DownloadDoneRounded,
   Favorite,
-  FavoriteRounded,
+  // FavoriteRounded,
   FiberManualRecord,
   GetAppRounded,
   GitHub,
@@ -37,11 +37,11 @@ import {
 import React, { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CustomDialogTitle, LogoutDialog, SettingsDialog } from ".";
-import bmcLogoLight from "../assets/bmc-logo-light.svg";
-import bmcLogo from "../assets/bmc-logo.svg";
+// import bmcLogoLight from "../assets/bmc-logo-light.svg";
+// import bmcLogo from "../assets/bmc-logo.svg";
 import { defaultUser } from "../constants/defaultUser";
 import { UserContext } from "../contexts/UserContext";
-import { fetchBMCInfo } from "../services/bmcApi";
+// import { fetchBMCInfo } from "../services/bmcApi";
 import { fetchGitHubInfo } from "../services/githubApi";
 import { DialogBtn, UserAvatar, pulseAnimation, reduceMotion, ring } from "../styles";
 import { ColorPalette } from "../theme/themeConfig";
@@ -65,9 +65,9 @@ export const ProfileSidebar = () => {
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [issuesCount, setIssuesCount] = useState<number | null>(null);
 
-  const [bmcSupporters, setBmcSupporters] = useState<number | null>(null);
+  // const [bmcSupporters, setBmcSupporters] = useState<number | null>(null);
 
-  const theme = useTheme();
+  // const theme = useTheme();
   const n = useNavigate();
 
   useEffect(() => {
@@ -78,18 +78,18 @@ export const ProfileSidebar = () => {
       setIssuesCount(repoData.open_issues_count);
     };
 
-    const fetchBMC: () => Promise<void> = async () => {
-      // Fetch data from the Buy Me a Coffee API
-      const { supportersCount } = await fetchBMCInfo();
-      // In case BMC api fails
-      if (supportersCount > 0) {
-        setBmcSupporters(supportersCount);
-      } else {
-        console.error("No BMC supporters found.");
-      }
-    };
+    // const fetchBMC: () => Promise<void> = async () => {
+    //   // Fetch data from the Buy Me a Coffee API
+    //   const { supportersCount } = await fetchBMCInfo();
+    //   // In case BMC api fails
+    //   if (supportersCount > 0) {
+    //     setBmcSupporters(supportersCount);
+    //   } else {
+    //     console.error("No BMC supporters found.");
+    //   }
+    // };
 
-    fetchBMC();
+    // fetchBMC();
     fetchRepoInfo();
   }, []);
 
@@ -314,7 +314,7 @@ export const ProfileSidebar = () => {
 
         <StyledDivider />
 
-        <MenuLink to="https://github.com/maciekt07/TodoApp">
+        <MenuLink to="https://github.com/Armaankhaan01/TaskHiveFrontend">
           <StyledMenuItem translate="no">
             <GitHub className="GitHubIcon" /> &nbsp; Github{" "}
             {stars && (
@@ -330,7 +330,7 @@ export const ProfileSidebar = () => {
           </StyledMenuItem>
         </MenuLink>
 
-        <MenuLink to="https://github.com/maciekt07/TodoApp/issues/new">
+        <MenuLink to="https://github.com/Armaankhaan01/TaskHiveFrontend/issues/new">
           <StyledMenuItem>
             <BugReportRounded className="BugReportRoundedIcon" /> &nbsp; Report Issue{" "}
             {Boolean(issuesCount || issuesCount === 0) && (
@@ -346,7 +346,7 @@ export const ProfileSidebar = () => {
           </StyledMenuItem>
         </MenuLink>
 
-        <MenuLink to="https://www.buymeacoffee.com/maciekt07">
+        {/* <MenuLink to="https://www.buymeacoffee.com/maciekt07">
           <StyledMenuItem className="bmcMenu">
             <BmcIcon className="bmc-icon" src={theme.darkmode ? bmcLogoLight : bmcLogo} /> &nbsp;
             Buy me a coffee{" "}
@@ -361,7 +361,7 @@ export const ProfileSidebar = () => {
               </Tooltip>
             )}
           </StyledMenuItem>
-        </MenuLink>
+        </MenuLink> */}
 
         <StyledDivider />
 
@@ -454,6 +454,34 @@ export const ProfileSidebar = () => {
               maciekt07
             </a>
           </CreditsContainer>
+          <CreditsContainer translate="no">
+            <span>Backend & integrations by</span>
+            <a
+              href="https://github.com/Armaankhaan01"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                marginLeft: "4px",
+                fontWeight: 600,
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              Arman Khan
+            </a>
+          </CreditsContainer>
+
+          <CreditsContainer translate="no">
+            <a
+              href="https://github.com/Armaankhaan01/TaskHiveFrontend"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "none", opacity: 0.85 }}
+            >
+              View backend-enabled fork on GitHub
+            </a>
+          </CreditsContainer>
+
           <CreditsContainer>
             {lastUpdate && (
               <Tooltip title={timeAgo(new Date(lastUpdate))}>
@@ -726,11 +754,11 @@ const LogoText = styled.h2`
   }
 `;
 
-const BmcIcon = styled.img`
-  width: 1em;
-  height: 1em;
-  font-size: 1.5rem;
-`;
+// const BmcIcon = styled.img`
+//   width: 1em;
+//   height: 1em;
+//   font-size: 1.5rem;
+// `;
 
 const ProfileOptionsBottom = styled.div`
   margin-top: auto;

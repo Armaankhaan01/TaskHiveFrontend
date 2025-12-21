@@ -10,6 +10,7 @@ import CustomSwitch from "../CustomSwitch";
 import { showToast } from "../../../utils";
 import type { OptionItem } from "../settingsTypes";
 import { OPTION_ICON_SIZE } from "../settingsConstants";
+import { updateProfile } from "../../../api/auth";
 
 const emojiStyles: OptionItem<EmojiStyle>[] = [
   { label: "Apple", value: EmojiStyle.APPLE },
@@ -46,12 +47,17 @@ export default function EmojiTab() {
       <CustomRadioGroup
         options={emojiStyles}
         value={emojiStyleValue}
-        onChange={(val) => {
-          setEmojiStyleValue(val);
-          setUser((prevUser) => ({
-            ...prevUser,
-            emojisStyle: val,
-          }));
+        onChange={async (val) => {
+          const res = await updateProfile({ emojisStyle: val }).catch(() => {
+            showToast("Failed to update emoji style", { type: "error" });
+          });
+          if (res) {
+            setEmojiStyleValue(val);
+            setUser((prevUser) => ({
+              ...prevUser,
+              emojisStyle: res.emojisStyle,
+            }));
+          }
         }}
         disabledOptions={isOnline ? [] : offlineDisabledEmojiStyles}
       />
@@ -74,15 +80,22 @@ export default function EmojiTab() {
       <Button
         variant="contained"
         color="error"
-        onClick={() => {
+        onClick={async () => {
           localStorage.removeItem("epr_suggested");
           showToast("Removed emoji data.");
           setHasEmojiData(false);
           if (user.settings.simpleEmojiPicker) {
-            setUser((prev) => ({
-              ...prev,
-              settings: { ...prev.settings, simpleEmojiPicker: false },
-            }));
+            const res = await updateProfile({
+              settings: { ...user.settings, simpleEmojiPicker: false },
+            }).catch(() => {
+              showToast("Failed to clear emoji data", { type: "error" });
+            });
+            if (res) {
+              setUser((prevUser) => ({
+                ...prevUser,
+                settings: res.settings,
+              }));
+            }
           }
         }}
       >

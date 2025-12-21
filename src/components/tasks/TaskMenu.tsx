@@ -7,7 +7,7 @@ import {
   Done,
   EditRounded,
   LaunchRounded,
-  LinkRounded,
+  // LinkRounded,
   MoveUpRounded,
   Pause,
   PlayArrow,
@@ -31,7 +31,7 @@ import { calculateDateDifference, generateUUID, showToast } from "../../utils";
 import { useTheme } from "@emotion/react";
 import { TaskContext } from "../../contexts/TaskContext";
 import { ColorPalette } from "../../theme/themeConfig";
-import { ShareDialog } from "./ShareDialog";
+// import { ShareDialog } from "./ShareDialog";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
 import { createTask, toggleTask } from "../../api/tasks";
 
@@ -51,7 +51,7 @@ export const TaskMenu = () => {
     setMoveMode,
     setSearch,
   } = useContext(TaskContext);
-  const [showShareDialog, setShowShareDialog] = useState<boolean>(false);
+  // const [showShareDialog, setShowShareDialog] = useState<boolean>(false);
 
   const isMobile = useResponsiveDisplay();
   const n = useNavigate();
@@ -335,15 +335,15 @@ export const TaskMenu = () => {
         ]
       : []),
 
-    <StyledMenuItem
-      key="share"
-      onClick={() => {
-        setShowShareDialog(true);
-        handleCloseMoreMenu();
-      }}
-    >
-      <LinkRounded /> &nbsp; Share
-    </StyledMenuItem>,
+    // <StyledMenuItem
+    //   key="share"
+    //   onClick={() => {
+    //     setShowShareDialog(true);
+    //     handleCloseMoreMenu();
+    //   }}
+    // >
+    //   <LinkRounded /> &nbsp; Share
+    // </StyledMenuItem>,
 
     <Divider key="divider-1" />,
 
@@ -428,11 +428,11 @@ export const TaskMenu = () => {
           {menuItems}
         </Menu>
       )}
-      <ShareDialog
+      {/* <ShareDialog
         open={showShareDialog}
         onClose={() => setShowShareDialog(false)}
         selectedTask={selectedTask}
-      />
+      /> */}
     </>
   );
 };
