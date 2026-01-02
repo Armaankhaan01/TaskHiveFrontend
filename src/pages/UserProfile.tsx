@@ -11,7 +11,6 @@ import {
   InputAdornment,
   TextField,
   Tooltip,
-  Typography,
 } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import styled from "@emotion/styled";
@@ -23,24 +22,29 @@ import {
   SaveRounded,
   Settings,
   TodayRounded,
-  UploadRounded,
+  // UploadRounded,
 } from "@mui/icons-material";
-import { PFP_MAX_SIZE, PROFILE_PICTURE_MAX_LENGTH, USER_NAME_MAX_LENGTH } from "../constants";
+import {
+  // PFP_MAX_SIZE,
+  PROFILE_PICTURE_MAX_LENGTH,
+  USER_NAME_MAX_LENGTH,
+} from "../constants";
 import { CustomDialogTitle, LogoutDialog, TopBar } from "../components";
-import { DialogBtn, fadeIn, UserAvatar, VisuallyHiddenInput } from "../styles";
+import { DialogBtn, fadeIn, UserAvatar } from "../styles";
 import { UserContext } from "../contexts/UserContext";
 import { timeAgo, getFontColor, showToast } from "../utils";
 import {
   initDB,
-  saveProfilePictureInDB,
+  // saveProfilePictureInDB,
   deleteProfilePictureFromDB,
-  validateImageFile,
-  fileToBase64,
+  // validateImageFile,
+  // fileToBase64,
   getProfilePictureFromDB,
-  optimizeProfilePicture,
-  ALLOWED_PFP_TYPES,
+  // optimizeProfilePicture,
+  // ALLOWED_PFP_TYPES,
 } from "../utils/profilePictureStorage";
 import { ColorPalette } from "../theme/themeConfig";
+import { updateProfile } from "../api/auth";
 
 // TODO: move this to settings dialog
 const UserProfile = () => {
@@ -83,11 +87,16 @@ const UserProfile = () => {
     });
   }, []);
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
     if (userName.length <= USER_NAME_MAX_LENGTH && userName !== name) {
-      setUser({ ...user, name: userName });
-      showToast("Updated user name");
-      setUserName("");
+      const res = await updateProfile({ name: userName }).catch(() => {
+        showToast("Failed to update Profile picture", { type: "error" });
+      });
+      if (res) {
+        setUser({ ...user, name: res.name });
+        setUserName("");
+        showToast("Updated user name");
+      }
     }
   };
 
@@ -99,7 +108,7 @@ const UserProfile = () => {
     setProfilePictureURL("");
   };
 
-  const handleSaveImageLink = () => {
+  const handleSaveImageLink = async () => {
     if (
       profilePictureURL.length <= PROFILE_PICTURE_MAX_LENGTH &&
       profilePictureURL.startsWith("https://")
@@ -115,82 +124,84 @@ const UserProfile = () => {
           showToast("Profile picture updated with link.");
         });
       } else {
-        setUser((prevUser) => ({
-          ...prevUser,
-          profilePicture: profilePictureURL,
-        }));
-        setProfilePictureURL("");
-        handleCloseImageDialog();
-        showToast("Profile picture updated with link.");
+        const res = await updateProfile({ profilePicture: profilePictureURL }).catch(() => {
+          showToast("Failed to update Profile picture", { type: "error" });
+        });
+        if (res) {
+          setUser((prevUser) => ({ ...prevUser, profilePicture: res.profilePicture }));
+          handleCloseImageDialog();
+          showToast("Profile picture updated with link.");
+          setProfilePictureURL("");
+        }
       }
     } else {
       showToast("Invalid profile picture URL.", { type: "error" });
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
 
-    const error = validateImageFile(file);
-    if (error) {
-      showToast(error, { type: "error" });
-      return;
-    }
+  //   const error = validateImageFile(file);
+  //   if (error) {
+  //     showToast(error, { type: "error" });
+  //     return;
+  //   }
 
-    try {
-      const originalSize = file.size;
-      // crop image to square first
-      const croppedBlob = await optimizeProfilePicture(file);
-      const croppedFile = new File([croppedBlob], file.name, { type: croppedBlob.type });
+  //   try {
+  //     const originalSize = file.size;
+  //     // crop image to square first
+  //     const croppedBlob = await optimizeProfilePicture(file);
+  //     const croppedFile = new File([croppedBlob], file.name, { type: croppedBlob.type });
 
-      const base64 = await fileToBase64(croppedFile);
-      const newId = await saveProfilePictureInDB(base64);
+  //     const base64 = await fileToBase64(croppedFile);
+  //     const newId = await saveProfilePictureInDB(base64);
 
-      setUser((prevUser) => ({
-        ...prevUser,
-        profilePicture: newId,
-      }));
+  //     setUser((prevUser) => ({
+  //       ...prevUser,
+  //       profilePicture: newId,
+  //     }));
 
-      handleCloseImageDialog();
+  //     handleCloseImageDialog();
 
-      const formatBytes = (bytes: number): string => {
-        const units = ["byte", "kilobyte", "megabyte"] as const;
-        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-        const value = bytes / 1024 ** i;
+  //     const formatBytes = (bytes: number): string => {
+  //       const units = ["byte", "kilobyte", "megabyte"] as const;
+  //       const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  //       const value = bytes / 1024 ** i;
 
-        return new Intl.NumberFormat(navigator.language, {
-          style: "unit",
-          unit: units[i],
-          maximumFractionDigits: 1,
-        }).format(value);
-      };
+  //       return new Intl.NumberFormat(navigator.language, {
+  //         style: "unit",
+  //         unit: units[i],
+  //         maximumFractionDigits: 1,
+  //       }).format(value);
+  //     };
 
-      // calculate actual byte size including the header
-      const base64Size = new TextEncoder().encode(base64).length;
+  //     // calculate actual byte size including the header
+  //     const base64Size = new TextEncoder().encode(base64).length;
 
-      const compressionPercent = Number(((1 - base64Size / originalSize) * 100).toFixed(1));
+  //     const compressionPercent = Number(((1 - base64Size / originalSize) * 100).toFixed(1));
 
-      showToast(
-        compressionPercent > 10 ? (
-          <>
-            <strong>Profile picture uploaded.</strong>
-            <br />
-            Compressed from <b style={{ whiteSpace: "nowrap" }}>
-              {formatBytes(originalSize)}
-            </b> to <b style={{ whiteSpace: "nowrap" }}>{formatBytes(base64Size)}</b> (
-            {compressionPercent}% smaller)
-          </>
-        ) : (
-          "Profile picture uploaded."
-        ),
-        { duration: 7000 },
-      );
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      showToast("Failed to upload profile picture.", { type: "error" });
-    }
-  };
+  //     showToast(
+  //       compressionPercent > 10 ? (
+  //         <>
+  //           <strong>Profile picture uploaded.</strong>
+  //           <br />
+  //           Compressed from <b style={{ whiteSpace: "nowrap" }}>
+  //             {formatBytes(originalSize)}
+  //           </b> to <b style={{ whiteSpace: "nowrap" }}>{formatBytes(base64Size)}</b> (
+  //           {compressionPercent}% smaller)
+  //         </>
+  //       ) : (
+  //         "Profile picture uploaded."
+  //       ),
+  //       { duration: 7000 },
+  //     );
+  //   } catch (error) {
+  //     console.error("Error uploading file:", error);
+  //     showToast("Failed to upload profile picture.", { type: "error" });
+  //   }
+  // };
 
   const handleDeleteImage = async (callback?: () => void) => {
     try {
@@ -349,11 +360,11 @@ const UserProfile = () => {
             }}
           />
 
-          <StyledDivider>
+          {/* <StyledDivider>
             <span style={{ opacity: 0.8 }}>or</span>
-          </StyledDivider>
+          </StyledDivider> */}
 
-          <Button
+          {/* <Button
             component="label"
             variant="contained"
             role={undefined}
@@ -363,9 +374,9 @@ const UserProfile = () => {
           >
             <UploadRounded /> &nbsp; Upload from file
             <VisuallyHiddenInput accept="image/*" type="file" onChange={handleFileUpload} />
-          </Button>
+          </Button> */}
 
-          <Typography sx={{ opacity: 0.6, textAlign: "center", fontSize: "14px" }}>
+          {/* <Typography sx={{ opacity: 0.6, textAlign: "center", fontSize: "14px" }}>
             {ALLOWED_PFP_TYPES.map((type) => type.replace("image/", "").toUpperCase()).join(", ")}{" "}
             under{" "}
             {new Intl.NumberFormat("en-US", {
@@ -373,7 +384,7 @@ const UserProfile = () => {
               unit: "megabyte",
               maximumFractionDigits: 2,
             }).format(PFP_MAX_SIZE / (1024 * 1024))}
-          </Typography>
+          </Typography> */}
 
           {profilePicture !== null && (
             <>
@@ -381,10 +392,15 @@ const UserProfile = () => {
               <Button
                 fullWidth
                 onClick={() => {
-                  handleDeleteImage(() => {
-                    setUser((prevUser) => ({ ...prevUser, profilePicture: null }));
-                    handleCloseImageDialog();
-                    showToast("Profile picture removed.");
+                  handleDeleteImage(async () => {
+                    const res = await updateProfile({ profilePicture: null }).catch(() => {
+                      showToast("Failed to update Profile picture", { type: "error" });
+                    });
+                    if (res) {
+                      setUser((prevUser) => ({ ...prevUser, profilePicture: res.profilePicture }));
+                      handleCloseImageDialog();
+                      showToast("Profile picture removed.");
+                    }
                   });
                 }}
                 color="error"
@@ -482,12 +498,12 @@ const CreatedAtDate = styled.span`
   }
 `;
 
-const StyledDivider = styled(Divider)`
-  &::before,
-  &::after {
-    border-color: ${({ theme }) => (theme.darkmode ? "#ffffff83" : "#00000083")};
-  }
-`;
+// const StyledDivider = styled(Divider)`
+//   &::before,
+//   &::after {
+//     border-color: ${({ theme }) => (theme.darkmode ? "#ffffff83" : "#00000083")};
+//   }
+// `;
 
 const BrokenPfpAlert = styled(Alert)`
   margin: 0;

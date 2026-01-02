@@ -1,10 +1,10 @@
-import { useContext, useMemo, lazy, Suspense, useEffect } from "react";
+import { useContext, useMemo, lazy, Suspense, useEffect, useState } from "react";
 import {
   AddButton,
-  AIButton,
   GreetingHeader,
   Offline,
   ProgressPercentageContainer,
+  StyledInput,
   StyledProgress,
   TaskCompletionText,
   TaskCountClose,
@@ -15,21 +15,36 @@ import {
 } from "../styles";
 
 import { Emoji } from "emoji-picker-react";
-import { Box, Button, CircularProgress, Tooltip, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import {
   AddRounded,
   CloseRounded,
-  Mic,
   TodayRounded,
   UndoRounded,
   WifiOff,
+  AddComment,
+  CommentBank,
 } from "@mui/icons-material";
 import { UserContext } from "../contexts/UserContext";
 import { useResponsiveDisplay } from "../hooks/useResponsiveDisplay";
 import { useNavigate } from "react-router-dom";
 import { AnimatedGreeting } from "../components/AnimatedGreeting";
 import { showToast } from "../utils";
+import { VoiceButton } from "../components/VoiceButton";
+import { useVoiceAssistant } from "../voice/useVoiceAssistant";
+import { CustomDialogTitle } from "../components";
+import InputThemeProvider from "../contexts/InputThemeProvider";
 
 const TasksList = lazy(() =>
   import("../components/tasks/TasksList").then((module) => ({ default: module.TasksList })),
@@ -37,7 +52,10 @@ const TasksList = lazy(() =>
 
 const Home = () => {
   const { user, setUser } = useContext(UserContext);
+  const [showTestDialog, setShowTestDialog] = useState<boolean>(false);
+  const [testText, setTestText] = useState<string>("");
   const { tasks, emojisStyle, settings, name } = user;
+  const { sendTestText, transcript } = useVoiceAssistant();
 
   const isOnline = useOnlineStatus();
   const n = useNavigate();
@@ -114,6 +132,51 @@ const Home = () => {
 
   return (
     <>
+      <Dialog
+        open={showTestDialog}
+        onClose={() => setShowTestDialog(false)}
+        slotProps={{
+          paper: {
+            style: {
+              padding: "12px",
+              borderRadius: "24px",
+              minWidth: "400px",
+            },
+          },
+        }}
+      >
+        <CustomDialogTitle
+          title="Send Test text"
+          subTitle={`Send test text to your voice assistant`}
+          onClose={() => setShowTestDialog(false)}
+          icon={<CommentBank />}
+        />
+        <DialogContent sx={{ p: 0, m: 0 }}>
+          <Alert severity="info">{transcript}</Alert>
+          <InputThemeProvider>
+            <StyledInput
+              placeholder="text"
+              onChange={(e) => setTestText(e.target.value)}
+              type="text"
+            />
+          </InputThemeProvider>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            color="info"
+            fullWidth
+            sx={{ mt: "14px" }}
+            onClick={() => {
+              sendTestText(testText);
+              setTestText("");
+            }}
+          >
+            Send Text
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <GreetingHeader>
         <Emoji unified="1f44b" emojiStyle={emojisStyle} /> &nbsp; {timeGreeting}
         {name && (
@@ -224,17 +287,20 @@ const Home = () => {
         </Tooltip>
       )}
       {!isMobile && (
-        <Tooltip title="For Assistant" placement="right">
-          <AIButton
+        <Tooltip title={tasks.length > 0 ? "Add New test Task" : "Add test Task"} placement="left">
+          <AddButton
             animate={tasks.length === 0}
             glow={settings.enableGlow}
-            onClick={() => console.log("clicked")}
-            aria-label="Mic for AI"
+            onClick={() => setShowTestDialog(true)}
+            aria-label="Add Task"
+            style={{ bottom: "200px" }}
           >
-            <Mic style={{ fontSize: "44px" }} />
-          </AIButton>
+            <AddComment style={{ fontSize: "44px" }} />
+          </AddButton>
         </Tooltip>
       )}
+
+      {!isMobile && <VoiceButton glow />}
     </>
   );
 };
